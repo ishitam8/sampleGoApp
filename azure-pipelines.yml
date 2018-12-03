@@ -27,6 +27,9 @@ variables:
 
   # Update AKS.ClusterName value Azure kubernetes cluster name.
   AKS.ClusterName: 'ishitamAKS'
+  
+  # Docker Container port
+  Container.Port: 80
 
   # ========================================================================
   #                           Optional variables 
