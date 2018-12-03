@@ -26,7 +26,7 @@ variables:
   ACR.Name: 'ishitamacr'
 
   # Update AKS.ClusterName value Azure kubernetes cluster name.
-  AKS.ClusterName: 'desattir'
+  AKS.ClusterName: 'ishitamAKS'
 
   # ========================================================================
   #                           Optional variables 
