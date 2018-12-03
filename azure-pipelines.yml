@@ -23,7 +23,7 @@ variables:
   Azure.Location: 'eastus'
 
   # Update ACR.Name value with ACR name. Please note ACR names should be all lower-case and alphanumeric only.
-  ACR.Name: 'desattiracr'
+  ACR.Name: 'ishitamacr'
 
   # Update AKS.ClusterName value Azure kubernetes cluster name.
   AKS.ClusterName: 'desattir'
