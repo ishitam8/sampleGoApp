@@ -14,20 +14,20 @@ variables:
   # ========================================================================
 
   # Update Azure.ResourceGroupName value with Azure resource group name.
-  Azure.ResourceGroupName: 'VstsRG-ishitamehta-54d0'
+  Azure.ResourceGroupName: 'dsmsgosample'
 
   # Update Azure.ServiceConnectionId value with AzureRm service endpoint.
-  Azure.ServiceConnectionId: 'ded9a0d3-8564-4b15-9973-10e1b0438c34'
+  Azure.ServiceConnectionId: 'cc11df34-8abd-4933-a5d7-92c950cd4b35'
 
   # Update Azure.Location value with Azure Location.
   Azure.Location: 'eastus'
 
   # Update ACR.Name value with ACR name. Please note ACR names should be all lower-case and alphanumeric only.
-  ACR.Name: 'ishitamacr'
+  ACR.Name: 'dsmsgosamplee64e'
 
   # Update AKS.ClusterName value Azure kubernetes cluster name.
-  AKS.ClusterName: 'ishitamAKS'
-  
+  AKS.ClusterName: 'dsmsgosample'
+
   # Docker Container port
   Container.Port: 80
 
@@ -40,7 +40,7 @@ variables:
   ACR.FullName: '$(ACR.Name).azurecr.io'
   ACR.Sku: 'Standard'
   AKS.KubeDeploymentYaml: '$(System.DefaultWorkingDirectory)/KubeDeployment.yml' # Update AKS.KubeDeploymentYaml if you want to use deployment file from repo instead of generated file.
-  AKS.DepoymentPort: '80'
+  AKS.DeploymentPort: '$(Container.Port)'
   Azure.CreateResources: 'true' # Update Azure.CreateResources to false if you have already created resources like resource group, azure container registry and azure kubernetes cluster.
   System.Debug: 'false'
 
@@ -59,6 +59,7 @@ jobs:
     inputs:
       connectedServiceNameARM: '$(Azure.ServiceConnectionId)'
       scriptLocation: inlineScript
+      addSpnToEnvironment: true
       inlineScript: |
         #!/bin/bash
         RGExists=$(az group exists --name $(Azure.ResourceGroupName))
@@ -75,6 +76,26 @@ jobs:
           CREATED_ACR=$(az acr create -n $(ACR.Name) -g $(Azure.ResourceGroupName) --sku $(ACR.Sku))
           echo "$CREATED_ACR"
         fi
+        CREATE_AKS=$(az resource list --name $(AKS.ClusterName) -g $(Azure.ResourceGroupName) --resource-type Microsoft.ContainerService/managedClusters --query "[0].id")
+        if [ -z "${CREATE_AKS}" ]
+        then
+          echo "Create AKS cluster: true"
+          echo "Creating AKS cluster..."
+          ssh-keygen -q -b 2048 -t rsa -f ssh_key -N ""
+          CREATED_AKS=$(az aks create -g $(Azure.ResourceGroupName) -n $(AKS.ClusterName) --ssh-key-value ./ssh_key.pub --service-principal $servicePrincipalId --client-secret "${servicePrincipalKey}")
+          echo $CREATED_AKS
+        else
+          echo "Create AKS cluster: false"
+          if [ -n "${CREATED_ACR}" ]; then
+            echo "Authenticating the newly created ACR with the AKS Cluster..."
+            CLIENT_ID=$(az aks show --resource-group $(Azure.ResourceGroupName) --name $(AKS.ClusterName) --query "servicePrincipalProfile.clientId" --output tsv)
+            ACR_ID=$(az acr show --name $(ACR.Name) --resource-group $(Azure.ResourceGroupName) --query "id" --output tsv)
+            az role assignment create --assignee $CLIENT_ID --role Reader --scope $ACR_ID
+          fi
+        fi
+        AKS_ID=$(az aks show --resource-group $(Azure.ResourceGroupName) --name $(AKS.ClusterName) --query "id" -o tsv)
+        echo "AKS cluster: [$(AKS.ClusterName)](https://portal.azure.com/#resource${AKS_ID}overview)" > $(System.DefaultWorkingDirectory)/azureCluster.md
+        echo "##vso[task.uploadsummary]$(System.DefaultWorkingDirectory)/azureCluster.md"
 
 - job: BuildImage
   displayName: Build
@@ -111,13 +132,16 @@ jobs:
     name: Hosted Ubuntu 1604
 
   steps:
-  - powershell: |
-      $KubeDeploymentYamlExists = Test-Path $(AKS.KubeDeploymentYaml)
-      Write-Host "##vso[task.setvariable variable=AKS.KubeDeploymentYamlExists;]$KubeDeploymentYamlExists"
+  - bash: |
+      if [ -f $(AKS.KubeDeploymentYaml) ]; then
+        echo "##vso[task.setvariable variable=AKS.KubeDeploymentYamlExists;]true"
+      else
+        echo "##vso[task.setvariable variable=AKS.KubeDeploymentYamlExists;]false"
+      fi
     displayName: 'Check kubernetes deployment yaml exists'
 
-  - powershell: |  
-       $kubeDeploymentYaml = "apiVersion: apps/v1beta1
+  - bash: |  
+       echo "apiVersion : apps/v1beta1
        kind: Deployment
        metadata:
          name: $(ACR.RepositoryName)
@@ -132,7 +156,7 @@ jobs:
              - name: $(ACR.RepositoryName)
                image: $(ACR.FullName)/$(ACR.ImageName)
                ports:
-               - containerPort: $(AKS.DepoymentPort)
+               - containerPort: $(AKS.DeploymentPort)
        ---
        apiVersion: v1
        kind: Service
@@ -141,11 +165,9 @@ jobs:
        spec:
          type: LoadBalancer
          ports:
-         - port: $(AKS.DepoymentPort)
+         - port: $(AKS.DeploymentPort)
          selector:
-           app: $(ACR.RepositoryName)"
-       
-       Set-Content -Path $(AKS.KubeDeploymentYaml) -Value $kubeDeploymentYaml 
+           app: $(ACR.RepositoryName)" > $(AKS.KubeDeploymentYaml)
     displayName: 'Generate kubernetes deployment yaml'
     condition: and(succeeded(), eq(variables['AKS.KubeDeploymentYamlExists'], 'False'))
 
