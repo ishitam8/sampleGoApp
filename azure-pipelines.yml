@@ -14,10 +14,10 @@ variables:
   # ========================================================================
 
   # Update Azure.ResourceGroupName value with Azure resource group name.
-  Azure.ResourceGroupName: 'desattir-rg'
+  Azure.ResourceGroupName: 'VstsRG-ishitamehta-54d0'
 
   # Update Azure.ServiceConnectionId value with AzureRm service endpoint.
-  Azure.ServiceConnectionId: '8eb2d317-eab9-4428-b0b7-eb095ec6285f'
+  Azure.ServiceConnectionId: 'ded9a0d3-8564-4b15-9973-10e1b0438c34'
 
   # Update Azure.Location value with Azure Location.
   Azure.Location: 'eastus'
