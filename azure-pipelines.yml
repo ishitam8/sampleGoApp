@@ -14,7 +14,7 @@ variables:
   # ========================================================================
 
   # Update Azure.ResourceGroupName value with Azure resource group name.
-  Azure.ResourceGroupName: 'VstsRG-ishitamehta-54d0'
+  Azure.ResourceGroupName: 'dsmsgosample'
 
   # Update Azure.ServiceConnectionId value with AzureRm service endpoint.
   Azure.ServiceConnectionId: 'ded9a0d3-8564-4b15-9973-10e1b0438c34'
@@ -23,10 +23,10 @@ variables:
   Azure.Location: 'eastus'
 
   # Update ACR.Name value with ACR name. Please note ACR names should be all lower-case and alphanumeric only.
-  ACR.Name: 'ishitamacr'
+  ACR.Name: 'dsmsgosamplee64e'
 
   # Update AKS.ClusterName value Azure kubernetes cluster name.
-  AKS.ClusterName: 'ishitamAKS'
+  AKS.ClusterName: 'dsmsgosample'
 
   # Docker Container port
   Container.Port: 80
